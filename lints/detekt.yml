@@ -1,0 +1,88 @@
+# Beautiful Android drop-in detekt config
+#
+# Copy next to your Gradle build (or point detekt at it with --config). It
+# enforces the machine-checkable half of the android-best-practices skill:
+# coroutine misuse, complexity, potential bugs, naming and style.
+#
+#   ./gradlew detekt
+#
+# A disabled rule, a raised threshold or a grown baseline is a contract
+# change, not a convenience. A @Suppress names the rule and the reason.
+
+build:
+  maxIssues: 0
+
+config:
+  validation: true
+  warningsAsErrors: true
+
+complexity:
+  LongMethod:
+    active: true
+    threshold: 60
+  CognitiveComplexMethod:
+    active: true
+    threshold: 25
+  NestedBlockDepth:
+    active: true
+    threshold: 4
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 20
+    thresholdInClasses: 15
+  LongParameterList:
+    active: true
+    functionThreshold: 6
+    constructorThreshold: 8
+
+coroutines:
+  GlobalCoroutineUsage:
+    active: true
+  RedundantSuspendModifier:
+    active: true
+  InjectDispatcher:
+    active: true
+    dispatcherNames:
+      - IO
+      - Default
+      - Unconfined
+
+potential-bugs:
+  active: true
+  IgnoredReturnValue:
+    active: true
+    restrictToAnnotatedMethods: true
+
+style:
+  MagicNumber:
+    active: true
+    ignoreNumbers: ["-1", "0", "1", "2"]
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+  ForbiddenComment:
+    active: true
+    comments: ["TODO:", "FIXME:", "XXX:"]
+  UnusedPrivateMember:
+    active: true
+  ReturnCount:
+    active: true
+    max: 4
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    functionPattern: "[a-z][a-zA-Z0-9]*"
+  ClassNaming:
+    active: true
+    classPattern: "[A-Z][a-zA-Z0-9]*"
+  VariableNaming:
+    active: true
+    variablePattern: "[a-z][a-zA-Z0-9]*"
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: true
+  SwallowedException:
+    active: true

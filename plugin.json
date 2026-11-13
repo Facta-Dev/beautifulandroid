@@ -1,0 +1,56 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "beautiful-android",
+  "version": "0.1.0",
+  "description": "Write, review, port, and enforce idiomatic native Android apps in Kotlin + Jetpack Compose: three skills distilled from the Android developer documentation, the Compose guidance, and the facta Android handbook, plus a drop-in detekt and ktlint config.",
+  "author": {
+    "name": "Facta-Dev",
+    "url": "https://github.com/Facta-Dev"
+  },
+  "homepage": "https://github.com/Facta-Dev/beautifulandroid",
+  "repository": "https://github.com/Facta-Dev/beautifulandroid",
+  "license": "MIT",
+  "keywords": [
+    "android",
+    "baseline-profiles",
+    "best-practices",
+    "code-review",
+    "compose",
+    "detekt",
+    "gradle",
+    "kotlin",
+    "ktlint",
+    "porting",
+    "skill"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Beautiful Android",
+        "shortDescription": "Write, review, port Android",
+        "longDescription": "Three skills for native Android developers on Kotlin + Jetpack Compose, distilled from the Android developer documentation, the Compose guidance, and the facta Android handbook.\n\nandroid-best-practices guides new native code: the sacred main thread, Gradle modules that enforce the domain/data/ui/app layers, UDF with UiState/UiEvent/effects, Navigation 3 and validated deep links, Room/DataStore and the WorkManager outbox, FCM, Keystore secrets, baseline/startup profiles and the low-end performance budget.\n\nandroid-review reviews a Compose screen, ViewModel, module graph, Room/WorkManager path, deep link, FCM handler, or diff and returns a prioritized report. Architecture and main-thread contracts rank above everything. Every finding cites a file and line, the rule it breaks, and the smallest fix.\n\nandroid-port ports a React Native, web, Java/XML Views or legacy screen to Kotlin + Compose with the same behavior. It ports the original tests first and writes a PORTING.md.\n\nThe skills contain instructions and reference text only. They make no network calls and collect no data. When a Gradle/Kotlin toolchain is available, the skills run Gradle test, detekt, and lint on your project; without one, they work from the code alone. A drop-in detekt and ktlint config is available in the GitHub repository.",
+        "developerName": "Facta-Dev",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Write idiomatic Kotlin + Compose apps",
+          "Review Android code with cited rules",
+          "Port RN, web or Views screens to Compose"
+        ],
+        "websiteURL": "https://github.com/Facta-Dev/beautifulandroid",
+        "supportURL": "https://github.com/Facta-Dev/beautifulandroid/issues",
+        "privacyPolicyURL": "https://github.com/Facta-Dev/beautifulandroid/blob/main/PRIVACY.md",
+        "defaultPrompt": [
+          "Review this Compose screen and list what to fix first",
+          "Port this React Native screen to Kotlin + Compose",
+          "Move this Room query off the main thread"
+        ],
+        "brandColor": "#3DDC84",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/icon.png"
+      },
+      "publication": {
+        "release_notes": "Initial release: three Android skills, the module and main-thread contract, and a proven detekt config."
+      }
+    }
+  }
+}

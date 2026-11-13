@@ -1,0 +1,30 @@
+{
+  "name": "beautiful-android",
+  "version": "0.1.0",
+  "description": "Write, review, port, and enforce idiomatic native Android apps in Kotlin + Jetpack Compose: three skills distilled from the Android developer documentation, the Compose guidance, and the facta Android handbook, plus a drop-in detekt and ktlint config.",
+  "license": "MIT",
+  "author": {
+    "name": "Facta-Dev",
+    "url": "https://github.com/Facta-Dev"
+  },
+  "homepage": "https://github.com/Facta-Dev/beautifulandroid",
+  "repository": "https://github.com/Facta-Dev/beautifulandroid",
+  "keywords": [
+    "android",
+    "baseline-profiles",
+    "best-practices",
+    "code-review",
+    "compose",
+    "detekt",
+    "gradle",
+    "kotlin",
+    "ktlint",
+    "porting",
+    "skill"
+  ],
+  "skills": [
+    "./skills/android-best-practices",
+    "./skills/android-port",
+    "./skills/android-review"
+  ]
+}
