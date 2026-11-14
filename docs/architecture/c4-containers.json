@@ -1,0 +1,248 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "beautifulandroid — Container Architecture",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "all",
+        "label": "All",
+        "focus": [
+          "user",
+          "app",
+          "featureui",
+          "domain",
+          "data",
+          "platform",
+          "keystore",
+          "api",
+          "fcm",
+          "workmgr"
+        ],
+        "note": "One native Android app: the Compose feature surface, the Gradle modules under it, the device stores, the systems it talks to."
+      },
+      {
+        "id": "auth",
+        "label": "Auth",
+        "focus": ["app", "featureui", "domain", "platform", "keystore", "api"],
+        "note": "Credential Manager or AppAuth + Custom Tabs with PKCE; the token is sealed by Keystore + Tink; the server decides what the app may do."
+      },
+      {
+        "id": "offline",
+        "label": "Offline",
+        "focus": ["featureui", "domain", "data", "workmgr", "api"],
+        "note": "The mutation lands in a Room outbox row; WorkManager drains it with an idempotency key; the server resolves the conflict."
+      },
+      {
+        "id": "release",
+        "label": "Release",
+        "focus": ["app", "featureui", "api", "fcm"],
+        "note": "One variant = one binary; R8 full mode plus a baseline profile; push is a channel, not a data path."
+      }
+    ],
+    "output": "c4-containers.html"
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "Device user",
+      "sublabel": "phone · tablet",
+      "pos": [30, 200],
+      "size": [120, 60]
+    },
+    {
+      "id": "app",
+      "type": "backend",
+      "label": ":apps:<variant>",
+      "sublabel": "composition root · nav · DI",
+      "pos": [200, 200],
+      "size": [150, 60]
+    },
+    {
+      "id": "featureui",
+      "type": "frontend",
+      "label": ":feature:<slice>:ui",
+      "sublabel": "Compose screens · ViewModel",
+      "pos": [430, 200],
+      "size": [160, 60]
+    },
+    {
+      "id": "domain",
+      "type": "backend",
+      "label": ":core:<slice>:domain",
+      "sublabel": "pure Kotlin · ports",
+      "pos": [690, 200],
+      "size": [160, 60]
+    },
+    {
+      "id": "api",
+      "type": "cloud",
+      "label": "Backend API",
+      "sublabel": "REST · authoritative",
+      "pos": [910, 200],
+      "size": [160, 60]
+    },
+    {
+      "id": "platform",
+      "type": "backend",
+      "label": ":core:platform",
+      "sublabel": "capability adapters",
+      "pos": [430, 360],
+      "size": [150, 60]
+    },
+    {
+      "id": "data",
+      "type": "backend",
+      "label": ":core:<slice>:data",
+      "sublabel": "Room · DataStore · SDK",
+      "pos": [690, 360],
+      "size": [160, 60]
+    },
+    {
+      "id": "keystore",
+      "type": "security",
+      "label": "Android Keystore + Tink",
+      "sublabel": "token · AES key",
+      "pos": [430, 520],
+      "size": [160, 60]
+    },
+    {
+      "id": "fcm",
+      "type": "cloud",
+      "label": "Firebase Cloud Messaging",
+      "sublabel": "HTTP v1 · minimal payload",
+      "pos": [200, 60],
+      "size": [160, 60]
+    },
+    {
+      "id": "workmgr",
+      "type": "backend",
+      "label": "WorkManager",
+      "sublabel": "drain · retry · backoff",
+      "pos": [910, 60],
+      "size": [160, 60]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "The app process — one variant = one application module = one binary",
+      "wraps": ["app", "featureui", "domain", "platform", "data"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Credential plane — Keystore + Tink only; never Room, DataStore, logs or the APK",
+      "wraps": ["keystore"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "k1",
+      "from": "user",
+      "to": "app",
+      "label": "tap"
+    },
+    {
+      "id": "k2",
+      "from": "app",
+      "to": "featureui",
+      "label": "nav · DI"
+    },
+    {
+      "id": "k3",
+      "from": "featureui",
+      "to": "domain",
+      "label": "ports"
+    },
+    {
+      "id": "k4",
+      "from": "featureui",
+      "to": "platform",
+      "label": "capability"
+    },
+    {
+      "id": "k5",
+      "from": "domain",
+      "to": "platform",
+      "label": "ports"
+    },
+    {
+      "id": "k6",
+      "from": "domain",
+      "to": "data",
+      "label": "impl"
+    },
+    {
+      "id": "k7",
+      "from": "data",
+      "to": "api",
+      "label": "REST"
+    },
+    {
+      "id": "k8",
+      "from": "platform",
+      "to": "keystore",
+      "label": "Tink key"
+    },
+    {
+      "id": "k9",
+      "from": "data",
+      "to": "workmgr",
+      "label": "unique work"
+    },
+    {
+      "id": "k10",
+      "from": "workmgr",
+      "to": "api",
+      "label": "POST"
+    },
+    {
+      "id": "k11",
+      "from": "app",
+      "to": "fcm",
+      "label": "token"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The architecture contract",
+      "items": [
+        "the Gradle module graph is the enforcement: a module's dependencies {} is the complete list of what it may import, so a forbidden edge is a compile error",
+        "domain modules apply the Kotlin/JVM plugin, not the Android plugin — an android.* import there does not compile; the data module implements the ports the domain declares",
+        "UDF is the only presentation contract: UiState down, UiEvent up, one-shot effects on a separate channel; the ViewModel never holds a Context, a View or a composable",
+        ":apps:<variant> is the composition root, the navigation host and the DI wiring — one variant = one application module = one binary, so the market app carries no game engine"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "The three skills and the lints",
+      "items": [
+        "android-best-practices loads whenever an agent writes or changes an Android app and carries the digests in references/ (android.md, compose-patterns.md, android-architecture.md, kotlin-strict.md)",
+        "android-review writes a prioritized report where every finding cites the rule it breaks and shows the smallest fix; a broken architecture contract is an automatic Must fix",
+        "android-port ports a React Native, web, Java/XML Views or legacy screen to Kotlin + Compose, porting the original tests first",
+        "lints/detekt.yml and lints/.editorconfig are the machine-checkable half: maxIssues 0, warningsAsErrors, InjectDispatcher, GlobalCoroutineUsage, RedundantSuspendModifier"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Secrets and the server",
+      "items": [
+        "secrets live in Keystore + Tink — never in SharedPreferences, Room, logs or the APK; a token in SharedPreferences is a breach on a shared device",
+        "the server is authoritative for game state, prices, payments and entitlements; root, emulator and Play Integrity are server-side risk signals, never a client block",
+        "FCM is a channel, not a data path: the payload is { v, type, id, route } and the tap goes through the same deep-link parser as any other link"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Offline, gates and CI",
+      "items": [
+        "the outbox is a Room table drained by WorkManager with an idempotency key, backoff and a dead-letter view; a conflict is resolved by the server and the local change is rejected visibly",
+        "CI runs scripts/check-lints.sh (detekt over the clean control and the violation harness), scripts/check-build.sh (Gradle test + detekt of the example) and scripts/check-examples.py",
+        "detekt InjectDispatcher makes a hard-coded Dispatchers.IO a finding; a module-wide @Suppress or a grown baseline is a finding, not a fix"
+      ]
+    }
+  ]
+}

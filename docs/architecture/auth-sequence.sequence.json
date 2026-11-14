@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "beautifulandroid — Credential & Trust Sequence",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "signin",
+        "label": "Sign-in",
+        "focus": ["app", "cred", "vault", "api", "play"],
+        "note": "credential to sealed token to an entitlement the server approves"
+      },
+      {
+        "id": "signout",
+        "label": "Sign-out",
+        "focus": ["app", "vault", "api"],
+        "note": "revoke the refresh token, then delete the Keystore key and clear local data"
+      }
+    ],
+    "output": "auth-sequence.sequence.html"
+  },
+  "participants": [
+    {
+      "id": "app",
+      "type": "frontend",
+      "label": "App",
+      "sublabel": "Compose · ViewModel · UDF"
+    },
+    {
+      "id": "cred",
+      "type": "external",
+      "label": "Credential Manager",
+      "sublabel": "Custom Tabs · PKCE"
+    },
+    {
+      "id": "vault",
+      "type": "security",
+      "label": "Keystore + Tink",
+      "sublabel": "sealed token · AES key"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Backend API",
+      "sublabel": "authoritative · PKCE verified"
+    },
+    {
+      "id": "play",
+      "type": "cloud",
+      "label": "Play Integrity",
+      "sublabel": "server-side risk signal"
+    }
+  ],
+  "segments": [
+    { "from": 146, "to": 470, "label": "Sign-in — credential to sealed token" },
+    { "from": 492, "to": 640, "label": "Sign-out — revoke and wipe" }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "from": "app",
+      "to": "cred",
+      "y": 164,
+      "label": "UiEvent.SignIn → Credential Manager",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m2",
+      "from": "cred",
+      "to": "app",
+      "y": 196,
+      "label": "Custom Tab opens the IdP (PKCE · state)",
+      "variant": "return"
+    },
+    {
+      "id": "m3",
+      "from": "app",
+      "to": "api",
+      "y": 228,
+      "label": "POST /auth/token { code, code_verifier }"
+    },
+    {
+      "id": "m4",
+      "from": "api",
+      "to": "app",
+      "y": 260,
+      "label": "200 { access, refresh }",
+      "variant": "return"
+    },
+    {
+      "id": "m5",
+      "from": "app",
+      "to": "vault",
+      "y": 292,
+      "label": "seal the token with a Keystore key"
+    },
+    {
+      "id": "m6",
+      "from": "vault",
+      "to": "app",
+      "y": 324,
+      "label": "ciphertext",
+      "variant": "return"
+    },
+    {
+      "id": "m7",
+      "from": "app",
+      "to": "api",
+      "y": 356,
+      "label": "GET /entitlements — Authorization: Bearer"
+    },
+    {
+      "id": "m8",
+      "from": "api",
+      "to": "play",
+      "y": 388,
+      "label": "integrity token + account"
+    },
+    {
+      "id": "m9",
+      "from": "play",
+      "to": "api",
+      "y": 420,
+      "label": "verdict",
+      "variant": "return"
+    },
+    {
+      "id": "m10",
+      "from": "api",
+      "to": "app",
+      "y": 452,
+      "label": "200 entitlements | 403 forbidden",
+      "variant": "return"
+    },
+    {
+      "id": "m11",
+      "from": "app",
+      "to": "api",
+      "y": 512,
+      "label": "POST /auth/logout — revoke the refresh token"
+    },
+    {
+      "id": "m12",
+      "from": "api",
+      "to": "app",
+      "y": 544,
+      "label": "204",
+      "variant": "return"
+    },
+    {
+      "id": "m13",
+      "from": "app",
+      "to": "vault",
+      "y": 576,
+      "label": "delete the Keystore key · clear Room"
+    },
+    {
+      "id": "m14",
+      "from": "vault",
+      "to": "app",
+      "y": 608,
+      "label": "cleared",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    { "participant": "app", "from": 158, "to": 616, "type": "frontend" },
+    { "participant": "cred", "from": 158, "to": 200, "type": "external" },
+    { "participant": "api", "from": 222, "to": 268, "type": "backend" },
+    { "participant": "vault", "from": 286, "to": 332, "type": "security" },
+    { "participant": "api", "from": 350, "to": 460, "type": "backend" },
+    { "participant": "play", "from": 382, "to": 428, "type": "cloud" },
+    { "participant": "api", "from": 506, "to": 552, "type": "backend" },
+    { "participant": "vault", "from": 570, "to": 616, "type": "security" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One credential, one seal",
+      "items": [
+        "Credential Manager (passkeys, passwords, Google) or AppAuth + Custom Tabs with PKCE: the app never sees a password",
+        "the token is sealed by Keystore + Tink and read back through a TokenProvider port — never SharedPreferences, Room, logs or the APK",
+        "a token in SharedPreferences is a breach on a shared device, and that is why the vault is a separate boundary"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "The server decides",
+      "items": [
+        "the token exchange verifies PKCE and state server-side; the client never decides access",
+        "Play Integrity is a server-side risk signal: the verdict informs the server's decision, it is never a client block",
+        "a 403 is a rendered state (UiState.Forbidden), not an empty screen — every state is rendered"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Sign-out",
+      "items": [
+        "revoke the refresh token server-side first, then delete the Keystore key and clear the local user data",
+        "the FCM token is revoked on logout too; a deep link received while signed out is queued and resumed after login",
+        "clear user data on sign-out or tenant switch, pending outbox rows included"
+      ]
+    }
+  ]
+}

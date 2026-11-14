@@ -1,0 +1,173 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "beautifulandroid \u2014 Runtime Lifecycle",
+    "quality_profile": "showcase",
+    "output": "runtime-lifecycle.lifecycle.html"
+  },
+  "mainPath": [
+    "boot",
+    "nav",
+    "vm",
+    "ready"
+  ],
+  "states": [
+    {
+      "id": "boot",
+      "type": "start",
+      "label": "Application.onCreate",
+      "sublabel": "App Startup \u00b7 ordered init",
+      "step": "01",
+      "tag": "entry"
+    },
+    {
+      "id": "nav",
+      "type": "active",
+      "label": "Nav 3 host",
+      "sublabel": "typed NavKey \u00b7 own back stack",
+      "step": "02"
+    },
+    {
+      "id": "vm",
+      "type": "active",
+      "label": "ViewModel init",
+      "sublabel": "sealed UiState \u00b7 injected dispatcher",
+      "step": "03"
+    },
+    {
+      "id": "ready",
+      "type": "success",
+      "label": "Steady state",
+      "sublabel": "every state rendered",
+      "step": "04",
+      "tag": "done"
+    },
+    {
+      "id": "gate",
+      "type": "decision",
+      "label": "Offline \u00b7 forbidden",
+      "sublabel": "a state, not an empty screen",
+      "tag": "gate"
+    },
+    {
+      "id": "work",
+      "type": "waiting",
+      "label": "WorkManager drain",
+      "sublabel": "deferrable guaranteed work",
+      "tag": "pause"
+    },
+    {
+      "id": "crash",
+      "type": "failure",
+      "label": "ANR / StrictMode",
+      "sublabel": "main-thread I/O is a bug",
+      "tag": "terminal"
+    },
+    {
+      "id": "restore",
+      "type": "success",
+      "label": "Process death",
+      "sublabel": "the outbox survives",
+      "tag": "terminal"
+    },
+    {
+      "id": "push",
+      "type": "external",
+      "label": "Push tap",
+      "sublabel": "cold start \u00b7 the same parser",
+      "tag": "entry"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t1",
+      "from": "boot",
+      "to": "nav"
+    },
+    {
+      "id": "t3",
+      "from": "nav",
+      "to": "vm"
+    },
+    {
+      "id": "t4",
+      "from": "vm",
+      "to": "ready"
+    },
+    {
+      "id": "t5",
+      "from": "vm",
+      "to": "gate",
+      "variant": "security",
+      "label": "offline \u00b7 403"
+    },
+    {
+      "id": "t6",
+      "from": "gate",
+      "to": "vm",
+      "label": "retry"
+    },
+    {
+      "id": "t7",
+      "from": "vm",
+      "to": "work",
+      "variant": "dashed",
+      "label": "enqueue"
+    },
+    {
+      "id": "t8",
+      "from": "work",
+      "to": "vm",
+      "label": "drained"
+    },
+    {
+      "id": "t9",
+      "from": "boot",
+      "to": "crash",
+      "variant": "dashed",
+      "label": "heavy onCreate"
+    },
+    {
+      "id": "t10",
+      "from": "ready",
+      "to": "restore",
+      "variant": "emphasis",
+      "label": "process death"
+    },
+    {
+      "id": "t11",
+      "from": "push",
+      "to": "nav"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Boot is not the app",
+      "items": [
+        "no heavy work in Application.onCreate; App Startup orders the initialization that genuinely has to be ordered",
+        "R8 full mode, a baseline profile and a startup profile are mandatory in release builds \u2014 a missing baseline profile makes a cold start feel broken on a low-end phone",
+        "one variant = one application module = one binary; the market app carries no game engine and no game permissions"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "One state, every state",
+      "items": [
+        "the ViewModel exposes StateFlow<UiState> and onEvent(UiEvent); a sealed interface makes a missed case a compile error",
+        "loading, empty, error, forbidden, offline and ready are all rendered \u2014 the ViewModel never holds a Context, a View or a composable",
+        "collectAsStateWithLifecycle; the dispatcher is injected, never Dispatchers.IO hard-coded in a ViewModel"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Work off the main thread",
+      "items": [
+        "the main thread never blocks: no disk, network, large parse or crypto on it; StrictMode in debug catches the rest",
+        "WorkManager takes the deferrable guaranteed work \u2014 the outbox drain, uploads; a foreground service only where policy allows",
+        "the low-end path is first-class: budgets per device tier and a runtime governor that lowers fidelity, never logic"
+      ]
+    }
+  ]
+}

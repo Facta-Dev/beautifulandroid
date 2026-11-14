@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "beautifulandroid — Modules & Slices",
+    "quality_profile": "showcase",
+    "output": "services-slices.architecture.html"
+  },
+  "components": [
+    {
+      "id": "app",
+      "type": "backend",
+      "label": ":apps:<variant>",
+      "sublabel": "composition root · nav host · DI",
+      "pos": [40, 60],
+      "size": [150, 60]
+    },
+    {
+      "id": "feature",
+      "type": "frontend",
+      "label": ":feature:<slice>:ui",
+      "sublabel": "ViewModel · UiState · composables",
+      "pos": [280, 60],
+      "size": [160, 60]
+    },
+    {
+      "id": "domain",
+      "type": "backend",
+      "label": ":core:<slice>:domain",
+      "sublabel": "entities · rules · ports (JVM)",
+      "pos": [560, 60],
+      "size": [160, 60]
+    },
+    {
+      "id": "data",
+      "type": "backend",
+      "label": ":core:<slice>:data",
+      "sublabel": "Room · DataStore · SDK adapters",
+      "pos": [840, 60],
+      "size": [160, 60]
+    },
+    {
+      "id": "platform",
+      "type": "backend",
+      "label": ":core:platform",
+      "sublabel": "Keystore · WorkManager · FCM",
+      "pos": [280, 240],
+      "size": [160, 60]
+    },
+    {
+      "id": "keystore",
+      "type": "security",
+      "label": "Android Keystore + Tink",
+      "sublabel": "token · AES key",
+      "pos": [280, 420],
+      "size": [160, 60]
+    },
+    {
+      "id": "room",
+      "type": "database",
+      "label": "Room (SQLite/WAL)",
+      "sublabel": "entities · outbox table",
+      "pos": [840, 240],
+      "size": [160, 60]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Composition root — :apps:<variant>",
+      "wraps": ["app"]
+    },
+    {
+      "kind": "region",
+      "label": "Feature slices — WALL: a feature never imports another feature's internals",
+      "wraps": ["feature"]
+    },
+    {
+      "kind": "region",
+      "label": "Core — domain (pure JVM) + data + Room · WALL: domain has no android.*, Room, Retrofit or Hilt",
+      "wraps": ["domain", "data", "room"]
+    },
+    {
+      "kind": "region",
+      "label": "Platform — Android capability adapters behind ports · never consumes feature UI",
+      "wraps": ["platform", "keystore"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "s1",
+      "from": "app",
+      "to": "feature",
+      "label": "DI · nav"
+    },
+    {
+      "id": "s2",
+      "from": "app",
+      "to": "platform",
+      "label": "adapters",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "s3",
+      "from": "feature",
+      "to": "domain",
+      "label": "domain ports"
+    },
+    {
+      "id": "s4",
+      "from": "feature",
+      "to": "platform",
+      "label": "capability",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "s5",
+      "from": "domain",
+      "to": "platform",
+      "label": "ports",
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "id": "s6",
+      "from": "domain",
+      "to": "data",
+      "label": "port impl"
+    },
+    {
+      "id": "s7",
+      "from": "platform",
+      "to": "keystore",
+      "label": "Tink key"
+    },
+    {
+      "id": "s8",
+      "from": "data",
+      "to": "room",
+      "label": "DAO · Flow"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The module graph is the law",
+      "items": [
+        "domain modules apply the Kotlin/JVM plugin, not the Android plugin — an android.* import there does not compile",
+        "a module's dependencies {} is the complete list of what it may import, so a forbidden edge is a compile error rather than a review comment",
+        "the consumer declares the port and the data or platform module implements it: SessionStore and TokenProvider by the domain, Navigator and PermissionChecker by the feature ui",
+        "ports return domain types; no android.* type ever crosses into the domain"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Variants and the feature wall",
+      "items": [
+        ":apps:game, :apps:market and :apps:avatar are thin app modules over shared feature and core modules; the market app does not depend on the game engine or its permissions",
+        "one variant = one application module = one binary; a product flavor that merely hides code is not the architecture",
+        "a feature importing another feature's internals is a Must fix — the Gradle dependency graph is the wall, and the fix is to re-cut the layout"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "The enforcement map",
+      "items": [
+        "domain has no android.* → a JVM-only module plus a forbidden-import check",
+        "feature UI does not import another feature's internals → the Gradle dependency graph",
+        "the app module contains no business logic → review plus the module graph",
+        "no main-thread I/O → StrictMode plus the detekt coroutine rules; no secret outside the Keystore → review plus a detekt and security scan"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Exceptions are re-cuts",
+      "items": [
+        "when a change would cross a layer, re-cut the layout: move the logic to the module that owns it",
+        "the rule is never to weaken or delete the lints to make a change pass; a config exception is a contract change, and a module-wide @Suppress is a finding",
+        "the lint config lives once, in lints/detekt.yml and lints/.editorconfig — when the skill and the config disagree, the config wins and the skill is fixed"
+      ]
+    }
+  ]
+}

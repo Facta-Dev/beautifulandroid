@@ -1,0 +1,191 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "beautifulandroid \u2014 Offline Outbox Algorithm (Room + WorkManager)",
+    "quality_profile": "showcase",
+    "output": "outbox-algorithm.workflow.html"
+  },
+  "lanes": [
+    {
+      "id": "app",
+      "label": "App"
+    },
+    {
+      "id": "room",
+      "label": "Room outbox"
+    },
+    {
+      "id": "wm",
+      "label": "WorkManager"
+    },
+    {
+      "id": "net",
+      "label": "Server"
+    },
+    {
+      "id": "dead",
+      "label": "Dead letter"
+    }
+  ],
+  "phases": [
+    {
+      "id": "p1",
+      "label": "Enqueue",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "p2",
+      "label": "Drain",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "p3",
+      "label": "Settle",
+      "fromCol": 4,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "emit",
+    "enqueue",
+    "schedule",
+    "drain",
+    "post",
+    "settle"
+  ],
+  "nodes": [
+    {
+      "id": "emit",
+      "lane": "app",
+      "col": 0,
+      "type": "backend",
+      "label": "User action",
+      "sublabel": "archive \u00b7 edit \u00b7 sync"
+    },
+    {
+      "id": "enqueue",
+      "lane": "room",
+      "col": 1,
+      "type": "database",
+      "label": "Outbox row",
+      "sublabel": "idempotency key \u00b7 payload"
+    },
+    {
+      "id": "schedule",
+      "lane": "wm",
+      "col": 2,
+      "type": "backend",
+      "label": "Unique work",
+      "sublabel": "OneTimeWorkRequest \u00b7 constraints"
+    },
+    {
+      "id": "drain",
+      "lane": "wm",
+      "col": 3,
+      "type": "backend",
+      "label": "Worker drain",
+      "sublabel": "pending rows \u00b7 idempotent"
+    },
+    {
+      "id": "post",
+      "lane": "net",
+      "col": 4,
+      "type": "cloud",
+      "label": "POST to the API",
+      "sublabel": "the server is authoritative"
+    },
+    {
+      "id": "settle",
+      "lane": "room",
+      "col": 5,
+      "type": "database",
+      "label": "Row settles",
+      "sublabel": "sent \u00b7 failed \u00b7 dead"
+    },
+    {
+      "id": "reject",
+      "lane": "dead",
+      "col": 5,
+      "type": "backend",
+      "label": "Rejected visibly",
+      "sublabel": "the server decides"
+    }
+  ],
+  "edges": [
+    {
+      "id": "o1",
+      "from": "emit",
+      "to": "enqueue",
+      "label": "the write and the intent commit together"
+    },
+    {
+      "id": "o2",
+      "from": "enqueue",
+      "to": "schedule",
+      "label": "enqueueUniqueWork"
+    },
+    {
+      "id": "o3",
+      "from": "schedule",
+      "to": "drain",
+      "label": "the worker starts"
+    },
+    {
+      "id": "o4",
+      "from": "drain",
+      "to": "post",
+      "label": "send the row"
+    },
+    {
+      "id": "o5",
+      "from": "post",
+      "to": "settle",
+      "label": "2xx \u2192 sent"
+    },
+    {
+      "id": "o6",
+      "from": "post",
+      "to": "drain",
+      "label": "error \u2192 backoff"
+    },
+    {
+      "id": "o7",
+      "from": "settle",
+      "to": "reject",
+      "label": "409 \u2192 the change is rejected"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The outbox is a Room table",
+      "items": [
+        "the mutation and the intent to send it commit together: the outbox is persisted in Room, never in memory",
+        "the row carries an idempotency key, so a retry after a crash cannot apply the change twice",
+        "a fire-and-forget mutation with no idempotency key and no rollback is a review finding \u2014 the fixed version writes the Room outbox and lets WorkManager drain it"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "WorkManager is the scheduler",
+      "items": [
+        "WorkManager is for deferrable guaranteed work \u2014 the outbox drain, uploads; a foreground service only where policy allows",
+        "constraints and backoff are the retry policy; WorkManagerTestInitHelper is how the idempotency and the retry are proven",
+        "the drain reads the pending rows and posts them; the server is authoritative for game state, prices, payments and entitlements"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Conflicts and death",
+      "items": [
+        "a conflict is resolved by the server; the local pending change is rejected visibly, never silently dropped",
+        "backoff, then a dead-letter view \u2014 the user sees what did not sync instead of a spinner that never ends",
+        "clear user data on sign-out or tenant switch, pending outbox rows included"
+      ]
+    }
+  ]
+}

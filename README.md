@@ -141,6 +141,24 @@ The unbreakable rules:
 5. The server is authoritative.
 6. Every state is rendered, including offline and forbidden.
 
+## Architecture diagrams
+
+Beautiful Android ships eight [Archify](https://github.com/tt-a1i/archify)
+diagrams under [`docs/architecture/`](docs/architecture/README.md). Each one
+is a standalone HTML page you can open in a browser, paired with the JSON it
+was rendered from.
+
+| Diagram | Type | What it shows |
+|---|---|---|
+| [c4-containers](docs/architecture/c4-containers.html) | architecture | The app, the Gradle modules under it, the device stores and the systems around them |
+| [services-slices](docs/architecture/services-slices.architecture.html) | architecture | The module topology and the dependency walls, each with the gate that enforces it |
+| [auth-algorithm](docs/architecture/auth-algorithm.workflow.html) | workflow | Credential Manager or AppAuth + PKCE, the Keystore seal, the server-side gate |
+| [outbox-algorithm](docs/architecture/outbox-algorithm.workflow.html) | workflow | The Room outbox row, the WorkManager drain, the server answer and the dead letter |
+| [auth-sequence](docs/architecture/auth-sequence.sequence.html) | sequence | The full sign-in chain, then the sign-out revoke and wipe |
+| [outbox-sequence](docs/architecture/outbox-sequence.sequence.html) | sequence | The write transaction, the drain, the settle and the state the user sees |
+| [database-dataflow](docs/architecture/database-dataflow.dataflow.html) | dataflow | Where state goes: Room, the outbox table, Keystore, WorkManager and the API |
+| [runtime-lifecycle](docs/architecture/runtime-lifecycle.lifecycle.html) | lifecycle | Boot, init, navigation, the ViewModel and steady state, with the gates and endings |
+
 ## The lints config
 
 [`lints/detekt.yml`](lints/detekt.yml) and
@@ -195,6 +213,9 @@ tests/                     validator, wording, lints-config and gate tests
 examples/
   minimal/                 a Kotlin/JVM UDF example + JUnit tests
   review-inventory.md      a full worked review
+docs/
+  architecture/            eight Archify diagrams (C4, modules, auth,
+                           outbox, sequences, dataflow, lifecycle)
 ```
 
 ## Sources

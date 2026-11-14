@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "beautifulandroid \u2014 Dataflow: state, stores, outbox, server",
+    "quality_profile": "showcase",
+    "output": "database-dataflow.dataflow.html"
+  },
+  "stages": [
+    {
+      "label": "App state"
+    },
+    {
+      "label": "Device stores"
+    },
+    {
+      "label": "Async"
+    },
+    {
+      "label": "Server"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "state",
+      "type": "frontend",
+      "label": "UiState (sealed)",
+      "sublabel": "StateFlow down \u00b7 UiEvent up",
+      "stage": 0,
+      "row": 1
+    },
+    {
+      "id": "dao",
+      "type": "database",
+      "label": "Room (SQLite/WAL)",
+      "sublabel": "entities \u00b7 suspend DAO \u00b7 Flow",
+      "stage": 1,
+      "row": 0
+    },
+    {
+      "id": "outbox",
+      "type": "database",
+      "label": "Outbox table",
+      "sublabel": "idempotency key \u00b7 pending",
+      "stage": 1,
+      "row": 2
+    },
+    {
+      "id": "vault",
+      "type": "security",
+      "label": "Keystore + Tink",
+      "sublabel": "sealed token \u00b7 AES key",
+      "stage": 1,
+      "row": 4
+    },
+    {
+      "id": "wm",
+      "type": "backend",
+      "label": "WorkManager",
+      "sublabel": "unique work \u00b7 retry \u00b7 backoff",
+      "stage": 2,
+      "row": 3
+    },
+    {
+      "id": "api",
+      "type": "cloud",
+      "label": "Backend API",
+      "sublabel": "authoritative \u00b7 REST",
+      "stage": 3,
+      "row": 1
+    }
+  ],
+  "flows": [
+    {
+      "id": "f1",
+      "from": "state",
+      "to": "dao",
+      "label": "read models"
+    },
+    {
+      "id": "f2",
+      "from": "state",
+      "to": "outbox",
+      "label": "write + outbox row",
+      "variant": "emphasis"
+    },
+    {
+      "id": "f3",
+      "from": "state",
+      "to": "vault",
+      "label": "bearer token",
+      "variant": "security"
+    },
+    {
+      "id": "f4",
+      "from": "state",
+      "to": "api",
+      "label": "REST + paging",
+      "route": "straight"
+    },
+    {
+      "id": "f5",
+      "from": "outbox",
+      "to": "wm",
+      "label": "pending rows",
+      "variant": "dashed"
+    },
+    {
+      "id": "f6",
+      "from": "wm",
+      "to": "api",
+      "label": "POST \u00b7 idempotency key",
+      "variant": "emphasis"
+    },
+    {
+      "id": "f7",
+      "from": "wm",
+      "to": "outbox",
+      "label": "sent \u00b7 retry \u00b7 dead",
+      "variant": "dashed"
+    },
+    {
+      "id": "f8",
+      "from": "api",
+      "to": "state",
+      "label": "responses \u00b7 403",
+      "variant": "default",
+      "route": "bottom-channel"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Where the data goes",
+      "items": [
+        "Room (SQLite/WAL) holds the structured data and the outbox table; DAOs are suspend or return Flow, and no query runs on the main thread",
+        "DataStore holds preferences; a secret never lands there \u2014 Keystore + Tink holds the sealed token and the AES key",
+        "the outbox row is written in the same transaction as the entity, so the mutation and the intent to send it commit together"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "The server is authoritative",
+      "items": [
+        "the API decides game state, prices, payments and entitlements; the client renders what the server says",
+        "Paging 3 feeds a network or database feed with a stable key and a bounded page",
+        "a conflict is resolved by the server; the local pending change is rejected visibly"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Async and recovery",
+      "items": [
+        "WorkManager drains the outbox with an idempotency key, backoff and a dead-letter view",
+        "the Room Flow is the single source of truth for the screen: a StateFlow of a sealed UiState down, a UiEvent up",
+        "clear user data on sign-out or tenant switch; pending outbox rows included"
+      ]
+    }
+  ]
+}

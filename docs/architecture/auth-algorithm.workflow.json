@@ -1,0 +1,234 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "beautifulandroid \u2014 Credential & Trust Algorithm",
+    "quality_profile": "showcase",
+    "output": "auth-algorithm.workflow.html"
+  },
+  "lanes": [
+    {
+      "id": "app",
+      "label": "App"
+    },
+    {
+      "id": "cred",
+      "label": "Credential"
+    },
+    {
+      "id": "vault",
+      "label": "Keystore"
+    },
+    {
+      "id": "server",
+      "label": "Server"
+    },
+    {
+      "id": "trust",
+      "label": "Trust"
+    }
+  ],
+  "phases": [
+    {
+      "id": "p1",
+      "label": "Authenticate",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "p2",
+      "label": "Exchange + seal",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "p3",
+      "label": "Trust",
+      "fromCol": 4,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "start",
+    "challenge",
+    "exchange",
+    "gate",
+    "seal",
+    "trust"
+  ],
+  "nodes": [
+    {
+      "id": "start",
+      "lane": "app",
+      "col": 0,
+      "type": "frontend",
+      "label": "Sign-in",
+      "sublabel": "Credential Manager \u00b7 AppAuth"
+    },
+    {
+      "id": "challenge",
+      "lane": "cred",
+      "col": 1,
+      "type": "external",
+      "label": "Custom Tabs + PKCE",
+      "sublabel": "code + state"
+    },
+    {
+      "id": "expired",
+      "lane": "cred",
+      "col": 2,
+      "type": "external",
+      "label": "No code",
+      "sublabel": "cancelled or rejected"
+    },
+    {
+      "id": "exchange",
+      "lane": "server",
+      "col": 2,
+      "type": "backend",
+      "label": "Code \u2192 tokens",
+      "sublabel": "server verifies PKCE + state"
+    },
+    {
+      "id": "gate",
+      "lane": "server",
+      "col": 3,
+      "type": "security",
+      "label": "Session gate",
+      "sublabel": "401 on expiry \u00b7 403 forbidden"
+    },
+    {
+      "id": "seal",
+      "lane": "vault",
+      "col": 4,
+      "type": "security",
+      "label": "Keystore + Tink",
+      "sublabel": "sealed token \u00b7 AES key"
+    },
+    {
+      "id": "trust",
+      "lane": "server",
+      "col": 5,
+      "type": "backend",
+      "label": "Entitlement",
+      "sublabel": "the server decides"
+    },
+    {
+      "id": "verdict",
+      "lane": "trust",
+      "col": 5,
+      "type": "cloud",
+      "label": "Play Integrity",
+      "sublabel": "server-side risk signal"
+    },
+    {
+      "id": "signout",
+      "lane": "app",
+      "col": 5,
+      "type": "frontend",
+      "label": "Sign-out",
+      "sublabel": "clear the session"
+    },
+    {
+      "id": "revoke",
+      "lane": "vault",
+      "col": 5,
+      "type": "security",
+      "label": "Revoke + wipe",
+      "sublabel": "key deleted \u00b7 user data cleared"
+    }
+  ],
+  "edges": [
+    {
+      "id": "a1",
+      "from": "start",
+      "to": "challenge",
+      "label": "the user picks an account"
+    },
+    {
+      "id": "a2",
+      "from": "challenge",
+      "to": "exchange",
+      "label": "auth code + state"
+    },
+    {
+      "id": "a2b",
+      "from": "challenge",
+      "to": "expired",
+      "label": "no code"
+    },
+    {
+      "id": "a2c",
+      "from": "expired",
+      "to": "start",
+      "label": "the user retries"
+    },
+    {
+      "id": "a3",
+      "from": "exchange",
+      "to": "gate",
+      "label": "access + refresh token"
+    },
+    {
+      "id": "a4",
+      "from": "gate",
+      "to": "seal",
+      "label": "bearer token"
+    },
+    {
+      "id": "a5",
+      "from": "seal",
+      "to": "trust",
+      "label": "what may this app do?"
+    },
+    {
+      "id": "a6",
+      "from": "trust",
+      "to": "verdict",
+      "label": "integrity token + account"
+    },
+    {
+      "id": "a7",
+      "from": "gate",
+      "to": "signout",
+      "label": "the session ends",
+      "variant": "security"
+    },
+    {
+      "id": "a8",
+      "from": "signout",
+      "to": "revoke",
+      "label": "delete the key"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The credential boundary",
+      "items": [
+        "auth is Credential Manager (passkeys, passwords, Google) or AppAuth + Custom Tabs with PKCE \u2014 the app never handles a password",
+        "the token is sealed by Keystore + Tink and read back through a TokenProvider port; never SharedPreferences, Room, logs or the APK",
+        "the token lifecycle is explicit: register on login, refresh on change, revoke on logout \u2014 sign-out deletes the key and clears the local user data"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "The server decides",
+      "items": [
+        "the server is authoritative for game state, prices, payments and entitlements; the client may hide an action, it never decides access",
+        "root, emulator and Play Integrity are server-side risk signals, never a client block; certificate pinning only with a rotation plan",
+        "authorization gates the destination server-side; the UI only shapes it, and a 403 is a rendered state rather than an empty screen"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Signed out, offline, forbidden",
+      "items": [
+        "a deep link received while signed out is queued and resumed after login; no state-changing action is ever taken from a link",
+        "every screen state is rendered, including offline and forbidden \u2014 one sealed UiState, never independent booleans",
+        "the FCM token is registered on login, refreshed on change and revoked on logout; the payload is { v, type, id, route }"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "beautifulandroid — Offline Outbox Sequence (Room + WorkManager)",
+    "quality_profile": "showcase",
+    "output": "outbox-sequence.sequence.html"
+  },
+  "participants": [
+    {
+      "id": "app",
+      "type": "backend",
+      "label": "Use case",
+      "sublabel": "ViewModel · sealed UiState"
+    },
+    {
+      "id": "room",
+      "type": "database",
+      "label": "Room (SQLite/WAL)",
+      "sublabel": "entities · outbox table"
+    },
+    {
+      "id": "wm",
+      "type": "backend",
+      "label": "WorkManager worker",
+      "sublabel": "drain · retry · backoff"
+    },
+    {
+      "id": "api",
+      "type": "cloud",
+      "label": "Backend API",
+      "sublabel": "the server is authoritative"
+    }
+  ],
+  "segments": [
+    { "from": 146, "to": 256, "label": "Write — entity and outbox row in one transaction" },
+    { "from": 278, "to": 500, "label": "Drain — the WorkManager worker" },
+    { "from": 522, "to": 580, "label": "Settle — the state the user sees" }
+  ],
+  "messages": [
+    {
+      "id": "s1",
+      "from": "app",
+      "to": "room",
+      "y": 164,
+      "label": "Room tx: write the entity + INSERT the outbox row (idempotency key)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "s2",
+      "from": "room",
+      "to": "app",
+      "y": 196,
+      "label": "committed — the row is durable",
+      "variant": "return"
+    },
+    {
+      "id": "s3",
+      "from": "app",
+      "to": "wm",
+      "y": 228,
+      "label": "enqueueUniqueWork — one drain at a time"
+    },
+    {
+      "id": "s4",
+      "from": "wm",
+      "to": "room",
+      "y": 296,
+      "label": "read the pending rows"
+    },
+    {
+      "id": "s5",
+      "from": "room",
+      "to": "wm",
+      "y": 328,
+      "label": "rows + payloads",
+      "variant": "return"
+    },
+    {
+      "id": "s6",
+      "from": "wm",
+      "to": "api",
+      "y": 360,
+      "label": "POST /sync { idempotencyKey, payload }"
+    },
+    {
+      "id": "s7",
+      "from": "api",
+      "to": "wm",
+      "y": 392,
+      "label": "200 ok | 409 conflict | 5xx",
+      "variant": "return"
+    },
+    {
+      "id": "s8",
+      "from": "wm",
+      "to": "room",
+      "y": 424,
+      "label": "sent → mark the row"
+    },
+    {
+      "id": "s9",
+      "from": "wm",
+      "to": "room",
+      "y": 456,
+      "label": "5xx → backoff and retry; 409 → dead-letter"
+    },
+    {
+      "id": "s10",
+      "from": "room",
+      "to": "app",
+      "y": 544,
+      "label": "Room Flow emits → UiState.Error / SyncFailed",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    { "participant": "app", "from": 158, "to": 236, "type": "backend" },
+    { "participant": "room", "from": 158, "to": 202, "type": "database" },
+    { "participant": "app", "from": 222, "to": 236, "type": "backend" },
+    { "participant": "wm", "from": 290, "to": 464, "type": "backend" },
+    { "participant": "room", "from": 290, "to": 334, "type": "database" },
+    { "participant": "api", "from": 354, "to": 398, "type": "cloud" },
+    { "participant": "room", "from": 418, "to": 464, "type": "database" },
+    { "participant": "room", "from": 538, "to": 552, "type": "database" },
+    { "participant": "app", "from": 538, "to": 552, "type": "backend" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Write once, send later",
+      "items": [
+        "the entity and the outbox row commit in the same Room transaction — a crash cannot lose the intent to send",
+        "the row carries an idempotency key, so a retry after a crash cannot apply the change twice",
+        "a fire-and-forget mutation with no idempotency key and no rollback is a review finding, not a style preference"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "The worker drains",
+      "items": [
+        "WorkManager is for deferrable guaranteed work: constraints, backoff and a dead-letter view",
+        "the worker reads the pending rows, posts them and settles each row — the server is authoritative for game state, prices and entitlements",
+        "WorkManagerTestInitHelper is how the idempotency and the retry are proven, alongside an in-memory Room database"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "What the user sees",
+      "items": [
+        "a 409 conflict is resolved by the server: the local pending change is rejected visibly, never silently dropped",
+        "the Room Flow is the single source of truth for the screen — a sealed UiState renders loading, empty, error, forbidden, offline and ready",
+        "clear user data on sign-out or tenant switch, pending outbox rows included"
+      ]
+    }
+  ]
+}
