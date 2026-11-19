@@ -14,6 +14,11 @@ description: >-
 
 # Android best practices
 
+> Playbook set: start with [`PLAYBOOK_MASTER.md`](https://github.com/Facta-Dev/ai-coding-playbook/blob/main/PLAYBOOK_MASTER.md) —
+> the catalog, precedence and cross-playbook invariants — then
+> [`PLAYBOOK_MOBILE_ANDROID_KOTLIN.md`](https://github.com/Facta-Dev/ai-coding-playbook/blob/main/PLAYBOOK_MOBILE_ANDROID_KOTLIN.md). This skill is the runnable companion of that
+> contract.
+
 Distilled from the Android developer documentation, the Compose guidance, and
 the facta Android handbook (`PLAYBOOK_MOBILE_ANDROID_KOTLIN.md`). The digests
 live in `references/`; where they disagree, this file says which to follow and
