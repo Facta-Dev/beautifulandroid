@@ -1,6 +1,6 @@
 {
   "name": "beautiful-android",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Write, review, port, and enforce idiomatic native Android apps in Kotlin + Jetpack Compose: three skills distilled from the Android developer documentation, the Compose guidance, and the facta Android handbook, plus a drop-in detekt and ktlint config.",
   "license": "MIT",
   "author": {
